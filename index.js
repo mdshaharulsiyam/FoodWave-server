@@ -23,7 +23,6 @@ const client = new MongoClient(`${process.env.DB_URI}`, {
 // database tables
 const Users = client.db('FoodWave').collection('Users');
 // upload file 
-const upload = multer({ storage });
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -32,11 +31,16 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   },
 });
+const upload = multer({ storage });
 //queary
 async function run() {
   try {
     client.connect();
-
+    app.post('/user', upload.single('file'), (req,res)=>{
+      const filename = `${req.file.destination}${req.file.filename}`
+      console.log(req.body,filename)
+      res.json('link hited')
+    })
 
     //test database cunnecton
     await client.db("admin").command({ ping: 1 });
