@@ -1,5 +1,7 @@
 const express = require('express')
 const app = express()
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 const port = process.env.PORT || 5000
 const cors = require('cors');
@@ -12,6 +14,7 @@ app.use(cors({
 }));
 app.use(express.json())
 app.use('/uploads',express.static('uploads'))
+app.use(cookieParser())
 //database cunnection
 const client = new MongoClient(`${process.env.DB_URI}`, {
   serverApi: {
@@ -20,6 +23,21 @@ const client = new MongoClient(`${process.env.DB_URI}`, {
     deprecationErrors: true,
   }
 });
+// verify token 
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+      return res.status(401).send({ message: 'unauthorized access' })
+  }
+  jwt.verify(token, process.env.ACCES_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+      }
+      req.user = decoded;
+      console.log(req.user)
+      next();
+  })
+}
 // database tables
 const Users = client.db('FoodWave').collection('Users');
 // upload file 
@@ -36,10 +54,26 @@ const upload = multer({ storage });
 async function run() {
   try {
     client.connect();
+    app.post('jwt',(req,res)=>{
+      const userInfo = req.body
+      const token = jwt.sign(userInfo, process.env.ACCES_TOKEN_SECRET,{expiresIn:'1h'})
+      res.cookie('token',token,{
+        httpOnly:true,
+        secure:true,
+        sameSite: 'none'
+      })
+      .send({succes: true})
+    })
+    app.post('/clearjwt',async(req,res)=>{
+      res.clearCookie('tocken',{maxAge:0})
+      .send({succes: true})
+    })
     app.post('/user', upload.single('file'), async(req,res)=>{
       const filename = `${req.file.destination}${req.file.filename}`
+      const {email}=req.body
       const data = {
-        filename
+        filename,
+        email
       }
       const location = req.get('host')
       const insertdata = await Users.insertOne(data)
