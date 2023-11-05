@@ -11,7 +11,7 @@ app.use(cors({
   credentials:true
 }));
 app.use(express.json())
-
+app.use('/uploads',express.static('uploads'))
 //database cunnection
 const client = new MongoClient(`${process.env.DB_URI}`, {
   serverApi: {
@@ -36,10 +36,18 @@ const upload = multer({ storage });
 async function run() {
   try {
     client.connect();
-    app.post('/user', upload.single('file'), (req,res)=>{
+    app.post('/user', upload.single('file'), async(req,res)=>{
       const filename = `${req.file.destination}${req.file.filename}`
-      console.log(req.body,filename)
-      res.json('link hited')
+      const data = {
+        filename
+      }
+      const location = req.get('host')
+      const insertdata = await Users.insertOne(data)
+      const {insertedId}=insertdata
+      const queary = {_id : insertedId}
+      const result = await Users.findOne(queary)
+      console.log(insertdata,insertedId,result)
+      res.send(result)
     })
 
     //test database cunnecton
