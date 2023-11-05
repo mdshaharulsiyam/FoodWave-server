@@ -46,8 +46,11 @@ async function run() {
       const {insertedId}=insertdata
       const queary = {_id : insertedId}
       const result = await Users.findOne(queary)
-      console.log(insertdata,insertedId,result)
-      res.send(result)
+      const modifiedData = {
+        ...result,
+        filename: `http://${location}/${result.filename}`,
+      };
+      res.send(modifiedData)
     })
 
     //test database cunnecton
