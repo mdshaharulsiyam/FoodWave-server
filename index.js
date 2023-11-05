@@ -54,7 +54,7 @@ const upload = multer({ storage });
 async function run() {
   try {
     client.connect();
-    app.post('jwt',(req,res)=>{
+    app.post('/jwt',(req,res)=>{
       const userInfo = req.body
       const token = jwt.sign(userInfo, process.env.ACCES_TOKEN_SECRET,{expiresIn:'1h'})
       res.cookie('token',token,{
