@@ -6,14 +6,14 @@ require('dotenv').config()
 const port = process.env.PORT || 5000
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const multer  = require('multer')
+const multer = require('multer')
 //middleware
 app.use(cors({
-  origin:['http://localhost:5173'],
-  credentials:true
+  origin: ['http://localhost:5173'],
+  credentials: true
 }));
 app.use(express.json())
-app.use('/uploads',express.static('uploads'))
+app.use('/uploads', express.static('uploads'))
 app.use(cookieParser())
 //database cunnection
 const client = new MongoClient(`${process.env.DB_URI}`, {
@@ -27,15 +27,15 @@ const client = new MongoClient(`${process.env.DB_URI}`, {
 const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
   if (!token) {
-      return res.status(401).send({ message: 'unauthorized access' })
+    return res.status(401).send({ message: 'unauthorized access' })
   }
   jwt.verify(token, process.env.ACCES_TOKEN_SECRET, (err, decoded) => {
-      if (err) {
-          return res.status(401).send({ message: 'unauthorized access' })
-      }
-      req.user = decoded;
-      console.log(req.user)
-      next();
+    if (err) {
+      return res.status(401).send({ message: 'unauthorized access' })
+    }
+    req.user = decoded;
+    console.log(req.user)
+    next();
   })
 }
 // database tables
@@ -55,31 +55,31 @@ const upload = multer({ storage });
 async function run() {
   try {
     client.connect();
-    app.post('/jwt',(req,res)=>{
+    app.post('/jwt', (req, res) => {
       const userInfo = req.body
-      const token = jwt.sign(userInfo, process.env.ACCES_TOKEN_SECRET,{expiresIn:'1h'})
-      res.cookie('token',token,{
-        httpOnly:true,
-        secure:true,
+      const token = jwt.sign(userInfo, process.env.ACCES_TOKEN_SECRET, { expiresIn: '1h' })
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
         sameSite: 'none'
       })
-      .send({succes: true})
+        .send({ succes: true })
     })
-    app.post('/clearjwt',async(req,res)=>{
-      res.clearCookie('tocken',{maxAge:0})
-      .send({succes: true})
+    app.post('/clearjwt', async (req, res) => {
+      res.clearCookie('tocken', { maxAge: 0 })
+        .send({ succes: true })
     })
-    app.post('/user', upload.single('file'), async(req,res)=>{
+    app.post('/user', upload.single('file'), async (req, res) => {
       const filename = `${req.file.destination}${req.file.filename}`
-      const {email}=req.body
+      const { email } = req.body
       const data = {
         filename,
         email
       }
       const location = req.get('host')
       const insertdata = await Users.insertOne(data)
-      const {insertedId}=insertdata
-      const queary = {_id : insertedId}
+      const { insertedId } = insertdata
+      const queary = { _id: insertedId }
       const result = await Users.findOne(queary)
       const modifiedData = {
         ...result,
@@ -87,11 +87,18 @@ async function run() {
       };
       res.send(modifiedData)
     })
-    app.post('/foods', upload.single('file'), async(req,res)=>{
-      const image = `${req.file.destination}${req.file.filename}`
-      const FoodData=req.body
-    console.log(image,FoodData)
-      res.json('link hited')
+    app.post('/foods', verifyToken, upload.single('file'), async (req, res) => {
+      console.log(req.user)
+      const foodimage = `${req.file.destination}${req.file.filename}`
+      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto } = req.body
+      if (!req.user.email === useremail) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage }
+        const result = await Foods.insertOne(modifiedData)
+        res.send(result)
+      }
+
     })
 
     //test database cunnecton
@@ -103,9 +110,9 @@ async function run() {
 
 
 app.get('/', (req, res) => {
-    res.send('FoodWave server is running')
-  })
-  app.listen(port,()=>{
-    console.log(`server is runing on port ${port}`)
-  })
-  run().catch(console.dir);
+  res.send('FoodWave server is running')
+})
+app.listen(port, () => {
+  console.log(`server is runing on port ${port}`)
+})
+run().catch(console.dir);
