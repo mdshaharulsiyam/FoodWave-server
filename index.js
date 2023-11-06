@@ -40,6 +40,7 @@ const verifyToken = async (req, res, next) => {
 }
 // database tables
 const Users = client.db('FoodWave').collection('Users');
+const Foods = client.db('FoodWave').collection('Foods');
 // upload file 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -85,6 +86,12 @@ async function run() {
         filename: `http://${location}/${result.filename}`,
       };
       res.send(modifiedData)
+    })
+    app.post('/foods', upload.single('file'), async(req,res)=>{
+      const image = `${req.file.destination}${req.file.filename}`
+      const FoodData=req.body
+    console.log(image,FoodData)
+      res.json('link hited')
     })
 
     //test database cunnecton
