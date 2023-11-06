@@ -100,6 +100,15 @@ async function run() {
       }
 
     })
+    app.get('/foods', async (req, res) => {
+      const location = req.get('host')
+      const result = await Foods.find({}).toArray();
+      const modifiedData = result.map(item => ({
+        ...item,
+        foodimage: `http://${location}/${item.foodimage}`,
+      }));
+      res.send(modifiedData)
+    })
     app.get('/feturedfood', async (req, res) => {
       const location = req.get('host')
       const currentDate = new Date();
@@ -113,7 +122,6 @@ async function run() {
         ...item,
         foodimage: `http://${location}/${item.foodimage}`,
       }));
-      console.log(modifiedData)
       res.send(modifiedData)
     })
 
