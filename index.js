@@ -90,15 +90,31 @@ async function run() {
     app.post('/foods', verifyToken, upload.single('file'), async (req, res) => {
       console.log(req.user)
       const foodimage = `${req.file.destination}${req.file.filename}`
-      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto } = req.body
+      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto ,date } = req.body
       if (!req.user.email === useremail) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
-        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage }
+        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage ,date}
         const result = await Foods.insertOne(modifiedData)
         res.send(result)
       }
 
+    })
+    app.get('/feturedfood', async (req, res) => {
+      const location = req.get('host')
+      const currentDate = new Date();
+      const year = currentDate.getUTCFullYear();
+      const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
+      const day = currentDate.getUTCDate().toString().padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+      const queary = { "date": { $gte: formattedDate } }
+      const result = await Foods.find(queary).sort({ "Quantity": -1 }).limit(6).toArray();
+      const modifiedData = result.map(item => ({
+        ...item,
+        foodimage: `http://${location}/${item.foodimage}`,
+      }));
+      console.log(modifiedData)
+      res.send(modifiedData)
     })
 
     //test database cunnecton
