@@ -102,7 +102,9 @@ async function run() {
     app.delete('/foods', verifyToken, async (req, res) => {
       const {id}=req.query;
        const queary = {_id : new ObjectId(id)}
+       const query = { foodid : id}
         const result = await Foods.deleteOne(queary)
+        const deletefromrequest = await Foodsrequest.deleteOne(query)
         res.send(result)
 
     })
@@ -125,9 +127,36 @@ async function run() {
     })
     app.post('/foodrequest', verifyToken, async (req, res) => {
       const data = req.body
-
       const result = await Foodsrequest.insertOne(data)
       res.send(result)
+    })
+    app.get('/foodrequest', verifyToken, async (req, res) => {
+      const {id,email} = req.query;
+      if (!req.user.email === email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const query = { useremail: email ,foodid : id}
+        const result = await Foodsrequest.find(query).toArray()
+        const modifiedData = result.map(item => ({
+          ...item,
+          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
+        }));    
+        return res.send(modifiedData)
+      }
+    })
+    app.get('/managefood', verifyToken, async (req, res) => {
+      const {id,email} = req.query;
+      if (!req.user.email === email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const query = { useremail: email ,_id : new ObjectId(id)}
+        const result = await Foods.findOne(query)
+        const modifiedData ={
+          ...result,
+          foodimage: result.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
+        };        
+        return res.send(modifiedData)
+      }
     })
 
 
@@ -234,7 +263,7 @@ async function run() {
       const result = await Foods.findOne(queary);
       const modifiedData = {
         ...result,
-        foodimage: item.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
+        foodimage: result.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
       };
       res.send(modifiedData)
     })
