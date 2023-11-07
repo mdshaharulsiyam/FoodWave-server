@@ -101,14 +101,20 @@ async function run() {
 
     })
     app.get('/foods', async (req, res) => {
-      const { shortitem, shorby } = req.query;
+      const { shortitem, shorby, search } = req.query;
       const currentDate = new Date();
       const year = currentDate.getUTCFullYear();
       const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
       const day = currentDate.getUTCDate().toString().padStart(2, "0");
       const formattedDate = `${year}-${month}-${day}`;
+      let queary = { "date": { $gte: formattedDate } }
+      if (search.length>0) {
+        queary = {
+          "date": { $gte: formattedDate },
+          "FoodName" :{ $regex: new RegExp(search, 'i') }
+        }
+      }
       const location = req.get('host');
-      const queary = { "date": { $gte: formattedDate } }
       // console.log(shortitem, shorby, req.query)
       if (shortitem === 'none') {
         const result = await Foods.find(queary).toArray();
@@ -167,6 +173,17 @@ async function run() {
       const formattedDate = `${year}-${month}-${day}`;
       const queary = { "date": { $gte: formattedDate } }
       const result = await Foods.find(queary).sort({ "Quantity": -1 }).limit(6).toArray();
+      const modifiedData = result.map(item => ({
+        ...item,
+        foodimage: `http://${location}/${item.foodimage}`,
+      }));
+      res.send(modifiedData)
+    })
+    app.get('/singlefood', async (req, res) => {
+      const location = req.get('host')
+      const {id}=req.query;
+      const queary = { _id : new ObjectId(id) }
+      const result = await Foods.find(queary).toArray();
       const modifiedData = result.map(item => ({
         ...item,
         foodimage: `http://${location}/${item.foodimage}`,
