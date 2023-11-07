@@ -41,6 +41,7 @@ const verifyToken = async (req, res, next) => {
 // database tables
 const Users = client.db('FoodWave').collection('Users');
 const Foods = client.db('FoodWave').collection('Foods');
+const Foodsrequest = client.db('FoodWave').collection('Foodsrequest');
 // upload file 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -88,7 +89,6 @@ async function run() {
       res.send(modifiedData)
     })
     app.post('/foods', verifyToken, upload.single('file'), async (req, res) => {
-      console.log(req.user)
       const foodimage = `${req.file.destination}${req.file.filename}`
       const { FoodName, location, Quantity, notes, username, useremail, status, userephoto, date } = req.body
       if (!req.user.email === useremail) {
@@ -98,8 +98,49 @@ async function run() {
         const result = await Foods.insertOne(modifiedData)
         res.send(result)
       }
-
     })
+    app.put('/foods', verifyToken, upload.single('file'), async (req, res) => {
+      const {id} = req.query;
+      const updateData = req.body;
+      const foodimage = req.file ? `${req.file.destination}${req.file.filename}` : null;
+      if (req.user.email !== updateData.useremail) {
+        return res.status(403).send({ message: 'Forbidden access' });
+      }
+      const queary = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          ...updateData,
+          foodimage: foodimage || updateData.foodimage,
+        },
+      };
+      const result = await Foods.updateOne(queary, update);
+      res.send(result)
+    })
+    app.post('/foodrequest', verifyToken, async (req, res) => {
+      const data = req.body
+
+      const result = await Foodsrequest.insertOne(data)
+      res.send(result)
+    })
+
+
+    app.get('/myfood', verifyToken, async (req, res) => {
+      const location = req.get('host')
+      const { email } = req.query;
+      if (!req.user.email === email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const query = { useremail: email }
+        const result = await Foods.find(query).toArray()
+        const modifiedData = result.map(item => ({
+          ...item,
+          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
+        }));        
+        return res.send(modifiedData)
+      }
+    })
+
+
     app.get('/foods', async (req, res) => {
       const { shortitem, shorby, search } = req.query;
       const currentDate = new Date();
@@ -108,10 +149,10 @@ async function run() {
       const day = currentDate.getUTCDate().toString().padStart(2, "0");
       const formattedDate = `${year}-${month}-${day}`;
       let queary = { "date": { $gte: formattedDate } }
-      if (search.length>0) {
+      if (search.length > 0) {
         queary = {
           "date": { $gte: formattedDate },
-          "FoodName" :{ $regex: new RegExp(search, 'i') }
+          "FoodName": { $regex: new RegExp(search, 'i') }
         }
       }
       const location = req.get('host');
@@ -181,13 +222,13 @@ async function run() {
     })
     app.get('/singlefood', async (req, res) => {
       const location = req.get('host')
-      const {id}=req.query;
-      const queary = { _id : new ObjectId(id) }
-      const result = await Foods.find(queary).toArray();
-      const modifiedData = result.map(item => ({
-        ...item,
-        foodimage: `http://${location}/${item.foodimage}`,
-      }));
+      const { id } = req.query;
+      const queary = { _id: new ObjectId(id) }
+      const result = await Foods.findOne(queary);
+      const modifiedData = {
+        ...result,
+        foodimage: `http://${location}/${result.foodimage}`,
+      };
       res.send(modifiedData)
     })
 
