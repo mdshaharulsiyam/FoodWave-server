@@ -99,6 +99,13 @@ async function run() {
         res.send(result)
       }
     })
+    app.delete('/foods', verifyToken, async (req, res) => {
+      const {id}=req.query;
+       const queary = {_id : new ObjectId(id)}
+        const result = await Foods.deleteOne(queary)
+        res.send(result)
+
+    })
     app.put('/foods', verifyToken, upload.single('file'), async (req, res) => {
       const {id} = req.query;
       const updateData = req.body;
@@ -161,7 +168,7 @@ async function run() {
         const result = await Foods.find(queary).toArray();
         const modifiedData = result.map(item => ({
           ...item,
-          foodimage: `http://${location}/${item.foodimage}`,
+          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
         }));
         res.send(modifiedData)
       }
@@ -171,7 +178,7 @@ async function run() {
           const result = await Foods.find(queary).sort({ "date": 1 }).toArray();
           const modifiedData = result.map(item => ({
             ...item,
-            foodimage: `http://${location}/${item.foodimage}`,
+            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
           }));
           return res.send(modifiedData)
         } else {
@@ -179,7 +186,7 @@ async function run() {
           const result = await Foods.find(queary).sort({ "date": -1 }).toArray();
           const modifiedData = result.map(item => ({
             ...item,
-            foodimage: `http://${location}/${item.foodimage}`,
+            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
           }));
           return res.send(modifiedData)
         }
@@ -190,7 +197,7 @@ async function run() {
           const result = await Foods.find(queary).sort({ "Quantity": -1 }).toArray();
           const modifiedData = result.map(item => ({
             ...item,
-            foodimage: `http://${location}/${item.foodimage}`,
+            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
           }));
           return res.send(modifiedData)
         } else {
@@ -199,7 +206,7 @@ async function run() {
           const result = await Foods.find(queary).sort({ "Quantity": 1 }).toArray();
           const modifiedData = result.map(item => ({
             ...item,
-            foodimage: `http://${location}/${item.foodimage}`,
+            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
           }));
           return res.send(modifiedData)
         }
@@ -216,7 +223,7 @@ async function run() {
       const result = await Foods.find(queary).sort({ "Quantity": -1 }).limit(6).toArray();
       const modifiedData = result.map(item => ({
         ...item,
-        foodimage: `http://${location}/${item.foodimage}`,
+        foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
       }));
       res.send(modifiedData)
     })
@@ -227,7 +234,7 @@ async function run() {
       const result = await Foods.findOne(queary);
       const modifiedData = {
         ...result,
-        foodimage: `http://${location}/${result.foodimage}`,
+        foodimage: item.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
       };
       res.send(modifiedData)
     })
