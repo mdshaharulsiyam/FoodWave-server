@@ -90,24 +90,73 @@ async function run() {
     app.post('/foods', verifyToken, upload.single('file'), async (req, res) => {
       console.log(req.user)
       const foodimage = `${req.file.destination}${req.file.filename}`
-      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto ,date } = req.body
+      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto, date } = req.body
       if (!req.user.email === useremail) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
-        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage ,date}
+        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage, date }
         const result = await Foods.insertOne(modifiedData)
         res.send(result)
       }
 
     })
     app.get('/foods', async (req, res) => {
-      const location = req.get('host')
-      const result = await Foods.find({}).toArray();
-      const modifiedData = result.map(item => ({
-        ...item,
-        foodimage: `http://${location}/${item.foodimage}`,
-      }));
-      res.send(modifiedData)
+      const { shortitem, shorby } = req.query;
+      const currentDate = new Date();
+      const year = currentDate.getUTCFullYear();
+      const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
+      const day = currentDate.getUTCDate().toString().padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+      const location = req.get('host');
+      const queary = { "date": { $gte: formattedDate } }
+      // console.log(shortitem, shorby, req.query)
+      if (shortitem === 'none') {
+        const result = await Foods.find(queary).toArray();
+        const modifiedData = result.map(item => ({
+          ...item,
+          foodimage: `http://${location}/${item.foodimage}`,
+        }));
+        res.send(modifiedData)
+      }
+      if (shortitem === 'date') {
+        //sort by expierdsoon
+        if (shorby === 'expierdsoon' || shorby === 'none') {
+          const result = await Foods.find(queary).sort({ "date": 1 }).toArray();
+          const modifiedData = result.map(item => ({
+            ...item,
+            foodimage: `http://${location}/${item.foodimage}`,
+          }));
+          return res.send(modifiedData)
+        } else {
+          //  sort by expiard latter
+          const result = await Foods.find(queary).sort({ "date": -1 }).toArray();
+          const modifiedData = result.map(item => ({
+            ...item,
+            foodimage: `http://${location}/${item.foodimage}`,
+          }));
+          return res.send(modifiedData)
+        }
+      }
+      if (shortitem === 'quantity') {
+        // sort by quantity largest
+        if (shorby === 'largest' || shorby === 'none') {
+          const result = await Foods.find(queary).sort({ "Quantity": -1 }).toArray();
+          const modifiedData = result.map(item => ({
+            ...item,
+            foodimage: `http://${location}/${item.foodimage}`,
+          }));
+          return res.send(modifiedData)
+        } else {
+          console.log('quantity smalest')
+          // sort by quantity smalest
+          const result = await Foods.find(queary).sort({ "Quantity": 1 }).toArray();
+          const modifiedData = result.map(item => ({
+            ...item,
+            foodimage: `http://${location}/${item.foodimage}`,
+          }));
+          return res.send(modifiedData)
+        }
+      }
     })
     app.get('/feturedfood', async (req, res) => {
       const location = req.get('host')
