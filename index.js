@@ -137,6 +137,11 @@ async function run() {
       const result = await Feedback.insertOne(data)
       res.send(result)
     })
+    app.get('/feedback', verifyToken, async (req, res) => {
+      console.log('asdsdfsdf')
+      const result = await Feedback.find({}).sort({ _id: -1 }).toArray();
+      res.send(result)
+    })
     app.delete('/myrequest', verifyToken, async (req, res) => {
       const { id, email } = req.query;
       console.log(req.query)
