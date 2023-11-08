@@ -141,9 +141,16 @@ async function run() {
             status : 'Deliverd'
           },
         };
+        const update1 = {
+          $set: {
+            status : 'Deliverd'
+          },
+        };
         const query = { useremail: email, foodid: foodId, requestUser: requester }
         const updatequery = {_id : new ObjectId(foodId)}
-        const updates = await Foods.updateOne(updatequery,updates)
+        const updatequery1 = {foodid: foodId,}
+        const updates = await Foods.updateOne(updatequery,update)
+        const updates1 = await Foodsrequest.updateOne(updatequery1,update1)
         const result = await Foodsrequest.deleteOne(query)
         return res.send(result)
       }
@@ -154,6 +161,20 @@ async function run() {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
         const query = { useremail: email, foodid: id }
+        const result = await Foodsrequest.find(query).toArray()
+        const modifiedData = result.map(item => ({
+          ...item,
+          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
+        }));
+        return res.send(modifiedData)
+      }
+    })
+    app.get('/requestfood', verifyToken, async (req, res) => {
+      const { email } = req.query;
+      if (!req.user.email === email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const query = { useremail: email, }
         const result = await Foodsrequest.find(query).toArray()
         const modifiedData = result.map(item => ({
           ...item,
