@@ -131,6 +131,18 @@ async function run() {
       const result = await Foodsrequest.insertOne(data)
       res.send(result)
     })
+    app.delete('/myrequest', verifyToken, async (req, res) => {
+      const { id, email } = req.query;
+      console.log(req.query)
+      const query = { _id: new ObjectId(id), requestUser: email }
+      if (!req.user.email === email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      } else {
+        const result = await Foodsrequest.deleteOne(query)
+        return res.send(result)
+
+      }
+    })
     app.delete('/foodrequest', verifyToken, async (req, res) => {
       const { foodId, email, requester } = req.query;
       if (!req.user.email === email) {
@@ -138,19 +150,19 @@ async function run() {
       } else {
         const update = {
           $set: {
-            status : 'Deliverd'
+            status: 'Deliverd'
           },
         };
         const update1 = {
           $set: {
-            status : 'Deliverd'
+            status: 'Deliverd'
           },
         };
         const query = { useremail: email, foodid: foodId, requestUser: requester }
-        const updatequery = {_id : new ObjectId(foodId)}
-        const updatequery1 = {foodid: foodId,}
-        const updates = await Foods.updateOne(updatequery,update)
-        const updates1 = await Foodsrequest.updateOne(updatequery1,update1)
+        const updatequery = { _id: new ObjectId(foodId) }
+        const updatequery1 = { foodid: foodId, }
+        const updates = await Foods.updateOne(updatequery, update)
+        const updates1 = await Foodsrequest.updateOne(updatequery1, update1)
         const result = await Foodsrequest.deleteOne(query)
         return res.send(result)
       }
