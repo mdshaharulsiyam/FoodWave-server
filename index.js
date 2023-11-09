@@ -11,9 +11,9 @@ const multer = require('multer')
 //middleware
 
 app.use(cors({
-  origin: ['https://imaginative-ganache-4b307c.netlify.app','http://localhost:5173'],
+  origin: ['https://imaginative-ganache-4b307c.netlify.app', 'http://localhost:5173'],
   credentials: true,
-  optionSuccessStatus:200
+  optionSuccessStatus: 200
 }));
 app.use(express.json())
 app.use('/uploads', express.static('uploads'))
@@ -34,13 +34,12 @@ const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
   if (!token) {
     return res.status(401).send({ message: 'unauthorized access' })
-  } 
+  }
   jwt.verify(token, process.env.ACCES_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).send({ message: 'unauthorized access' })
     }
     req.user = decoded;
-    console.log(req.user)
     next();
   })
 }
@@ -80,9 +79,8 @@ async function run() {
     // insaert food data
 
     app.post('/foods', verifyToken, async (req, res) => {
-      const {useremail}=req.query
-           const data = req.body
-      console.log(data)
+      const { useremail } = req.query
+      const data = req.body
       if (!req.user.email === useremail) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
@@ -108,7 +106,6 @@ async function run() {
     app.put('/foods', verifyToken, async (req, res) => {
       const { id } = req.query;
       const updateData = req.body;
-      console.log(updateData,id)
       if (req.user.email !== updateData.useremail) {
         return res.status(403).send({ message: 'Forbidden access' });
       }
@@ -126,6 +123,13 @@ async function run() {
 
     app.post('/foodrequest', verifyToken, async (req, res) => {
       const data = req.body
+      const {requestUser,foodid}=data
+      const query = { requestUser: requestUser, foodid : foodid}
+      const getfood = await Foodsrequest.find(query).toArray()
+      if (getfood.length >0) {
+        return  res.send({massage : 'food already aded'})
+      }
+
       const result = await Foodsrequest.insertOne(data)
       res.send(result)
     })
@@ -134,7 +138,7 @@ async function run() {
       const result = await Feedback.insertOne(data)
       res.send(result)
     })
-    app.get('/feedback',async (req, res) => {
+    app.get('/feedback', async (req, res) => {
       const result = await Feedback.find({}).sort({ _id: -1 }).toArray();
       res.send(result)
     })
@@ -143,7 +147,6 @@ async function run() {
 
     app.delete('/myrequest', verifyToken, async (req, res) => {
       const { id, email } = req.query;
-      console.log(req.query)
       const query = { _id: new ObjectId(id), requestUser: email }
       if (!req.user.email === email) {
         return res.status(403).send({ message: 'forbidden access' })
@@ -172,11 +175,13 @@ async function run() {
           },
         };
         const query = { useremail: email, foodid: foodId, requestUser: requester }
-        const updatequery = { _id: new ObjectId(foodId) }
-        const updatequery1 = { foodid: foodId, }
-        const updates = await Foods.updateOne(updatequery, update)
-        const updates1 = await Foodsrequest.updateOne(updatequery1, update1)
         const result = await Foodsrequest.deleteOne(query)
+        if (result) {
+          const updatequery = { _id: new ObjectId(foodId) }
+          const updatequery1 = { foodid: foodId, }
+          const updates = await Foods.updateOne(updatequery, update)
+          const updates1 = await Foodsrequest.updateOne(updatequery1, update1)
+        }
         return res.send(result)
       }
     })
@@ -234,15 +239,15 @@ async function run() {
     })
 
     //get totat count of food
-    app.get('/foodcount',async(req,res)=>{
-      const foodCount= await Foods.countDocuments()
+    app.get('/foodcount', async (req, res) => {
+      const foodCount = await Foods.countDocuments()
       res.json(foodCount)
     })
 
     // get all foods
 
     app.get('/foods', async (req, res) => {
-      const { shortitem, shorby, search,page, limit } = req.query;
+      const { shortitem, shorby, search, page, limit } = req.query;
       const limitint = Number(limit)
       const pageint = Number(page)
       const currentDate = new Date();
@@ -278,7 +283,6 @@ async function run() {
           const result = await Foods.find(queary).sort({ "Quantity": -1 }).skip(pageint * limitint).limit(limitint).toArray();
           return res.send(result)
         } else {
-          console.log('quantity smalest')
           // sort by quantity smalest
           const result = await Foods.find(queary).sort({ "Quantity": 1 }).skip(pageint * limitint).limit(limitint).toArray();
           return res.send(result)
