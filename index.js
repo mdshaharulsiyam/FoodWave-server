@@ -7,15 +7,20 @@ const port = process.env.PORT || 5000
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const multer = require('multer')
+
 //middleware
+
 app.use(cors({
-  origin: ['http://localhost:5173'],
-  credentials: true
+  origin: ['https://imaginative-ganache-4b307c.netlify.app','http://localhost:5173'],
+  credentials: true,
+  optionSuccessStatus:200
 }));
 app.use(express.json())
 app.use('/uploads', express.static('uploads'))
 app.use(cookieParser())
+
 //database cunnection
+
 const client = new MongoClient(`${process.env.DB_URI}`, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -24,11 +29,12 @@ const client = new MongoClient(`${process.env.DB_URI}`, {
   }
 });
 // verify token 
+
 const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
   if (!token) {
     return res.status(401).send({ message: 'unauthorized access' })
-  }
+  } 
   jwt.verify(token, process.env.ACCES_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).send({ message: 'unauthorized access' })
@@ -38,25 +44,22 @@ const verifyToken = async (req, res, next) => {
     next();
   })
 }
+
 // database tables
+
 const Users = client.db('FoodWave').collection('Users');
 const Foods = client.db('FoodWave').collection('Foods');
 const Foodsrequest = client.db('FoodWave').collection('Foodsrequest');
 const Feedback = client.db('FoodWave').collection('Feedback');
+
 // upload file 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
-});
-const upload = multer({ storage });
+
+
 //queary
+
 async function run() {
   try {
-    client.connect();
+    // jwt 
     app.post('/jwt', (req, res) => {
       const userInfo = req.body
       const token = jwt.sign(userInfo, process.env.ACCES_TOKEN_SECRET, { expiresIn: '1h' })
@@ -67,39 +70,29 @@ async function run() {
       })
         .send({ succes: true })
     })
+    // cleaer jwt
     app.post('/clearjwt', async (req, res) => {
       res.clearCookie('tocken', { maxAge: 0 })
         .send({ succes: true })
     })
-    app.post('/user', upload.single('file'), async (req, res) => {
-      const filename = `${req.file.destination}${req.file.filename}`
-      const { email } = req.body
-      const data = {
-        filename,
-        email
-      }
-      const location = req.get('host')
-      const insertdata = await Users.insertOne(data)
-      const { insertedId } = insertdata
-      const queary = { _id: insertedId }
-      const result = await Users.findOne(queary)
-      const modifiedData = {
-        ...result,
-        filename: `http://${location}/${result.filename}`,
-      };
-      res.send(modifiedData)
-    })
-    app.post('/foods', verifyToken, upload.single('file'), async (req, res) => {
-      const foodimage = `${req.file.destination}${req.file.filename}`
-      const { FoodName, location, Quantity, notes, username, useremail, status, userephoto, date } = req.body
+
+
+    // insaert food data
+
+    app.post('/foods', verifyToken, async (req, res) => {
+      const {useremail}=req.query
+           const data = req.body
+      console.log(data)
       if (!req.user.email === useremail) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
-        const modifiedData = { FoodName, location, Quantity, notes, username, useremail, status, userephoto, foodimage, date }
-        const result = await Foods.insertOne(modifiedData)
+        const result = await Foods.insertOne(data)
         res.send(result)
       }
     })
+
+    // delete food data 
+
     app.delete('/foods', verifyToken, async (req, res) => {
       const { id } = req.query;
       const queary = { _id: new ObjectId(id) }
@@ -109,10 +102,13 @@ async function run() {
       res.send(result)
 
     })
-    app.put('/foods', verifyToken, upload.single('file'), async (req, res) => {
+
+    //update food data
+
+    app.put('/foods', verifyToken, async (req, res) => {
       const { id } = req.query;
       const updateData = req.body;
-      const foodimage = req.file ? `${req.file.destination}${req.file.filename}` : null;
+      console.log(updateData,id)
       if (req.user.email !== updateData.useremail) {
         return res.status(403).send({ message: 'Forbidden access' });
       }
@@ -120,12 +116,13 @@ async function run() {
       const update = {
         $set: {
           ...updateData,
-          foodimage: foodimage || updateData.foodimage,
         },
       };
       const result = await Foods.updateOne(queary, update);
       res.send(result)
     })
+
+    // insert food request
 
     app.post('/foodrequest', verifyToken, async (req, res) => {
       const data = req.body
@@ -137,11 +134,13 @@ async function run() {
       const result = await Feedback.insertOne(data)
       res.send(result)
     })
-    app.get('/feedback', verifyToken, async (req, res) => {
-      console.log('asdsdfsdf')
+    app.get('/feedback',async (req, res) => {
       const result = await Feedback.find({}).sort({ _id: -1 }).toArray();
       res.send(result)
     })
+
+    //cancel food request
+
     app.delete('/myrequest', verifyToken, async (req, res) => {
       const { id, email } = req.query;
       console.log(req.query)
@@ -154,6 +153,9 @@ async function run() {
 
       }
     })
+
+    // deliverd food 
+
     app.delete('/foodrequest', verifyToken, async (req, res) => {
       const { foodId, email, requester } = req.query;
       if (!req.user.email === email) {
@@ -178,6 +180,9 @@ async function run() {
         return res.send(result)
       }
     })
+
+    // get food request for singe food
+
     app.get('/foodrequest', verifyToken, async (req, res) => {
       const { id, email } = req.query;
       if (!req.user.email === email) {
@@ -185,63 +190,61 @@ async function run() {
       } else {
         const query = { useremail: email, foodid: id }
         const result = await Foodsrequest.find(query).toArray()
-        const modifiedData = result.map(item => ({
-          ...item,
-          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-        }));
-        return res.send(modifiedData)
+        return res.send(result)
       }
     })
+
+    //get my food request
+
     app.get('/requestfood', verifyToken, async (req, res) => {
       const { email } = req.query;
       if (!req.user.email === email) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
-        const query = { useremail: email, }
+        const query = { requestUser: email, }
         const result = await Foodsrequest.find(query).toArray()
-        const modifiedData = result.map(item => ({
-          ...item,
-          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-        }));
-        return res.send(modifiedData)
+        return res.send(result)
       }
     })
+
+    // get my added single food
+
     app.get('/managefood', verifyToken, async (req, res) => {
-      const location = req.get('host')
       const { id, email } = req.query;
       if (!req.user.email === email) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
         const query = { useremail: email, _id: new ObjectId(id) }
         const result = await Foods.findOne(query)
-        const modifiedData = {
-          ...result,
-          foodimage: result.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
-        };
-        return res.send(modifiedData)
+        return res.send(result)
       }
     })
 
+    // get my all added foods
 
     app.get('/myfood', verifyToken, async (req, res) => {
-      const location = req.get('host')
       const { email } = req.query;
       if (!req.user.email === email) {
         return res.status(403).send({ message: 'forbidden access' })
       } else {
         const query = { useremail: email }
         const result = await Foods.find(query).toArray()
-        const modifiedData = result.map(item => ({
-          ...item,
-          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-        }));
-        return res.send(modifiedData)
+        return res.send(result)
       }
     })
 
+    //get totat count of food
+    app.get('/foodcount',async(req,res)=>{
+      const foodCount= await Foods.countDocuments()
+      res.json(foodCount)
+    })
+
+    // get all foods
 
     app.get('/foods', async (req, res) => {
-      const { shortitem, shorby, search } = req.query;
+      const { shortitem, shorby, search,page, limit } = req.query;
+      const limitint = Number(limit)
+      const pageint = Number(page)
       const currentDate = new Date();
       const year = currentDate.getUTCFullYear();
       const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
@@ -254,58 +257,38 @@ async function run() {
           "FoodName": { $regex: new RegExp(search, 'i') }
         }
       }
-      const location = req.get('host');
-      // console.log(shortitem, shorby, req.query)
       if (shortitem === 'none') {
-        const result = await Foods.find(queary).toArray();
-        const modifiedData = result.map(item => ({
-          ...item,
-          foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-        }));
-        res.send(modifiedData)
+        const result = await Foods.find(queary).skip(pageint * limitint).limit(limitint).toArray();
+        res.send(result)
       }
       if (shortitem === 'date') {
         //sort by expierdsoon
         if (shorby === 'expierdsoon' || shorby === 'none') {
-          const result = await Foods.find(queary).sort({ "date": 1 }).toArray();
-          const modifiedData = result.map(item => ({
-            ...item,
-            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-          }));
-          return res.send(modifiedData)
+          const result = await Foods.find(queary).sort({ "date": 1 }).skip(pageint * limitint).limit(limitint).toArray();
+          return res.send(result)
         } else {
           //  sort by expiard latter
-          const result = await Foods.find(queary).sort({ "date": -1 }).toArray();
-          const modifiedData = result.map(item => ({
-            ...item,
-            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-          }));
-          return res.send(modifiedData)
+          const result = await Foods.find(queary).sort({ "date": -1 }).skip(pageint * limitint).limit(limitint).toArray();
+          return res.send(result)
         }
       }
       if (shortitem === 'quantity') {
         // sort by quantity largest
         if (shorby === 'largest' || shorby === 'none') {
-          const result = await Foods.find(queary).sort({ "Quantity": -1 }).toArray();
-          const modifiedData = result.map(item => ({
-            ...item,
-            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-          }));
-          return res.send(modifiedData)
+          const result = await Foods.find(queary).sort({ "Quantity": -1 }).skip(pageint * limitint).limit(limitint).toArray();
+          return res.send(result)
         } else {
           console.log('quantity smalest')
           // sort by quantity smalest
-          const result = await Foods.find(queary).sort({ "Quantity": 1 }).toArray();
-          const modifiedData = result.map(item => ({
-            ...item,
-            foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-          }));
-          return res.send(modifiedData)
+          const result = await Foods.find(queary).sort({ "Quantity": 1 }).skip(pageint * limitint).limit(limitint).toArray();
+          return res.send(result)
         }
       }
     })
+
+    // get fetured food
+
     app.get('/feturedfood', async (req, res) => {
-      const location = req.get('host')
       const currentDate = new Date();
       const year = currentDate.getUTCFullYear();
       const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
@@ -313,36 +296,24 @@ async function run() {
       const formattedDate = `${year}-${month}-${day}`;
       const queary = { "date": { $gte: formattedDate } }
       const result = await Foods.find(queary).sort({ "Quantity": -1 }).limit(6).toArray();
-      const modifiedData = result.map(item => ({
-        ...item,
-        foodimage: item.foodimage.includes('http') ? item.foodimage : `http://${location}/${item.foodimage}`,
-      }));
-      res.send(modifiedData)
+      res.send(result)
     })
     app.get('/singlefood', async (req, res) => {
-      const location = req.get('host')
       const { id } = req.query;
       const queary = { _id: new ObjectId(id) }
       const result = await Foods.findOne(queary);
-      const modifiedData = {
-        ...result,
-        foodimage: result.foodimage.includes('http') ? result.foodimage : `http://${location}/${result.foodimage}`,
-      };
-      res.send(modifiedData)
+      res.send(result)
     })
 
-    //test database cunnecton
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
   } finally {
   }
 }
 
-
+run().catch(console.dir);
 app.get('/', (req, res) => {
   res.send('FoodWave server is running')
 })
 app.listen(port, () => {
   console.log(`server is runing on port ${port}`)
 })
-run().catch(console.dir);
