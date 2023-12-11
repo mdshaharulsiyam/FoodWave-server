@@ -250,15 +250,16 @@ async function run() {
       const { shortitem, shorby, search, page, limit } = req.query;
       const limitint = Number(limit)
       const pageint = Number(page)
-      const currentDate = new Date();
-      const year = currentDate.getUTCFullYear();
-      const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
-      const day = currentDate.getUTCDate().toString().padStart(2, "0");
-      const formattedDate = `${year}-${month}-${day}`;
-      let queary = { "date": { $gte: formattedDate } }
-      if (search.length > 0) {
+      // const currentDate = new Date();
+      // const year = currentDate.getUTCFullYear();
+      // const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
+      // const day = currentDate.getUTCDate().toString().padStart(2, "0");
+      // const formattedDate = `${year}-${month}-${day}`;
+      let queary = {}
+      // "date": { $gte: formattedDate }
+      if (search?.length > 0) {
         queary = {
-          "date": { $gte: formattedDate },
+          // "date": { $gte: formattedDate },
           "FoodName": { $regex: new RegExp(search, 'i') }
         }
       }
@@ -293,13 +294,13 @@ async function run() {
     // get fetured food
 
     app.get('/feturedfood', async (req, res) => {
-      const currentDate = new Date();
-      const year = currentDate.getUTCFullYear();
-      const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
-      const day = currentDate.getUTCDate().toString().padStart(2, "0");
-      const formattedDate = `${year}-${month}-${day}`;
-      const queary = { "date": { $gte: formattedDate } }
-      const result = await Foods.find(queary).sort({ "Quantity": -1 }).limit(6).toArray();
+      // const currentDate = new Date();
+      // const year = currentDate.getUTCFullYear();
+      // const month = (currentDate.getUTCMonth() + 1).toString().padStart(2, "0");
+      // const day = currentDate.getUTCDate().toString().padStart(2, "0");
+      // const formattedDate = `${year}-${month}-${day}`;
+      // const queary = { "date": { $gte: formattedDate } }
+      const result = await Foods.find({}).sort({ "Quantity": -1 }).limit(6).toArray();
       res.send(result)
     })
     app.get('/singlefood', async (req, res) => {
